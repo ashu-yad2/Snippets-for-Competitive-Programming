@@ -1,1 +1,1 @@
-# beginner-snippet
+# Snippets-for-Competitve-Programming
