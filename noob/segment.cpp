@@ -1,4 +1,3 @@
-//'Academics sucks! - codinator(2020)'
 #include<bits/stdc++.h>
  
 #define ar array 
