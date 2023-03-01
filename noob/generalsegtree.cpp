@@ -47,6 +47,22 @@ mt19937 RNG(chrono::steady_clock::now().time_since_epoch().count());
 #define SHUF(v) shuffle(all(v), RNG);
 // Use mt19937_64 for 64 bit random numbers.
 
+struct upd {
+  ll setval;
+  ll increment;
+  upd() {
+    setval = -1;
+    increment = 0;
+  }
+  upd(ll setval, ll increment) {
+    this->setval = setval;
+    this->increment = increment;
+  }
+  bool operator==(const upd&other) const {
+    return setval == other.setval && increment == other.increment;
+  }
+};
+
 // segment tres with data in range [tl, tr) with 1 based segment tree for (0, n) array
 template<class T, class U>
 struct segtree{
@@ -72,13 +88,22 @@ struct segtree{
   }
 
   U mergeUpdate(U oldUpd, U newUpd, ll tl, ll tr) {
-    U ans = oldUpd;
-    ans = newUpd;
+    U ans;
+    if(newUpd.setval == -1) {
+      ans = oldUpd;
+      ans.increment += newUpd.increment;
+    }
+    else ans = newUpd;
     return ans;
   }
 
-  T apply(T cur, U upd, ll tl, ll tr) {
-    T ans = (tr - tl) * upd;
+  T apply(T cur, U up, ll tl, ll tr) {
+    T ans;
+    ans = cur;
+    if(up.setval != -1) {
+      ans = (tr - tl) * (up.setval + up.increment); 
+    }
+    else ans += (tr - tl) * up.increment;
     return ans;
     //increment range ans = cur + (tr - tl) * upd;
   }
@@ -89,11 +114,12 @@ struct segtree{
     if(lazy[cur] == identityUpdate) return;
     data[cur] = apply(data[cur], lazy[cur], tl, tr);
     if(2 * cur <= 4 * n + 1) {
-      ll tm = (tl + tl) >> 1;
+      ll tm = (tl + tr) >> 1;
       lazy[2 * cur] = mergeUpdate(lazy[2 * cur], lazy[cur], tl, tm);
       lazy[2 * cur + 1] = mergeUpdate(lazy[2 * cur + 1], lazy[cur], tm, tr);
     }
-    lazy[cur] = 0;
+    lazy[cur].setval = -1;
+    lazy[cur].increment = 0;
   }
 
 
@@ -108,14 +134,14 @@ struct segtree{
   }
 
 
-  void updateUtil(ll cur, ll tl, ll tr, ll l, ll r, ll val) {
+  void updateUtil(ll cur, ll tl, ll tr, ll l, ll r, U val) {
+    pushdown(cur, tl, tr);
     if(tl >= r || tr <= l) return;
     if(l <= tl && tr <= r) {
       lazy[cur] = mergeUpdate(lazy[cur], val, tl, tr);
       pushdown(cur, tl, tr);
     }
     else {
-      pushdown(cur, tl, tr);
       ll tm = (tl + tr) >> 1;
       updateUtil(2 * cur, tl, tm, l, r, val);
       updateUtil(2 * cur + 1, tm, tr, l, r, val);
@@ -124,10 +150,10 @@ struct segtree{
   }
 
   T queryUtil(ll cur, ll tl, ll tr, ll l, ll r) {
+    pushdown(cur, tl, tr);
     if(tl >= r || tr <= l) return identityElement;
     if(l <= tl && tr <= r) return data[cur];
 
-    pushdown(cur, tl, tr);
     ll tm = (tl + tr) >> 1;
     return merge(queryUtil(2 * cur, tl, tm, l, r),
     queryUtil(2 * cur + 1, tm, tr, l, r));
@@ -154,7 +180,8 @@ void solve() {
    vll v(n);
    rep(i, 0, n) cin >> v[i];
 
-   segtree<ll, ll> a(n, 0, 0);
+   upd up(-1, 0);
+   segtree<ll, upd> a(n, 0, up);
 
    a.build(v);
 
@@ -165,7 +192,16 @@ void solve() {
     cin >> type >> l >> r;
     l--; r--;
     if(type == 1) {
-      a.update(l, l, r + 1);
+      ll val; cin >> val;
+      upd temp(-1, val);
+      a.update(l, r, temp);
+     // cout << a.query(l, r) << " here " << endl;
+    }
+    else if(type == 2) {
+      ll val; cin >> val;
+      upd temp(val, 0);
+      a.update(l, r, temp);
+   //   cout << a.query(l, r) << " here " << endl;
     }
     else cout << a.query(l, r) << endl;
    }
